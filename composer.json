@@ -37,10 +37,11 @@
         "friendsofphp/php-cs-fixer": "^3.0",
         "hyperf/devtool": "~3.2.0",
         "hyperf/testing": "~3.2.0",
+        "hyperf/watcher": "^3.2",
         "mockery/mockery": "^1.0",
+        "pestphp/pest": "^2.34",
         "phpstan/phpstan": "^2.0",
-        "swoole/ide-helper": "^6.0",
-        "pestphp/pest": "^2.34"
+        "swoole/ide-helper": "^6.0"
     },
     "suggest": {
         "ext-openssl": "Required to use HTTPS.",
