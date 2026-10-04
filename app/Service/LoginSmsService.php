@@ -12,8 +12,9 @@ declare(strict_types=1);
 
 namespace App\Service;
 
-use App\Contract\SmsSenderInterface;
-use InvalidArgumentException;
+use App\Sms\Contract\SmsSenderInterface;
+use App\Sms\Message\LoginCodeInput;
+use App\Sms\Message\SmsSendResult;
 
 class LoginSmsService
 {
@@ -21,16 +22,10 @@ class LoginSmsService
     {
     }
 
-    public function sendLoginCode(string $mobile, string $code): void
+    public function sendLoginCode(string $mobile, string $code): SmsSendResult
     {
-        if (! preg_match('/^1[3-9]\d{9}$/D', $mobile)) {
-            throw new InvalidArgumentException('手机号格式不正确');
-        }
+        new LoginCodeInput($mobile, $code);
 
-        if (! preg_match('/^\d{6}$/D', $code)) {
-            throw new InvalidArgumentException('验证码必须是 6 位数字');
-        }
-
-        $this->sender->sendCode($mobile, $code);
+        return $this->sender->sendCode($mobile, $code);
     }
 }

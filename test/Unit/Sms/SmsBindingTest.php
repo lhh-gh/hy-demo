@@ -13,13 +13,16 @@ declare(strict_types=1);
 namespace HyperfTest\Unit\Sms;
 
 use AlibabaCloud\SDK\Dysmsapi\V20170525\Dysmsapi;
-use App\Contract\SmsSenderInterface;
-use App\Factory\AliyunSmsClientFactory;
 use App\Service\LoginSmsService;
-use App\Sms\DatabaseSmsConfigRepository;
-use App\Sms\LogSmsSender;
-use App\Sms\RoutingSmsSender;
-use App\Sms\SmsConfigRepositoryInterface;
+use App\Service\SmsNoticeService;
+use App\Sms\Config\DatabaseSmsConfigRepository;
+use App\Sms\Contract\SmsConfigRepositoryInterface;
+use App\Sms\Contract\SmsSenderInterface;
+use App\Sms\Gateway\Aliyun\AliyunGateway;
+use App\Sms\Gateway\Aliyun\AliyunSmsClientFactory;
+use App\Sms\Gateway\Tencent\TencentGateway;
+use App\Sms\Sender\LogSmsSender;
+use App\Sms\Sender\RoutingSmsSender;
 use Hyperf\Config\Config;
 use Hyperf\Contract\ConfigInterface;
 use Hyperf\Di\Container;
@@ -56,6 +59,9 @@ final class SmsBindingTest extends TestCase
 
         self::assertInstanceOf($expected, $container->get(SmsSenderInterface::class));
         self::assertInstanceOf(LoginSmsService::class, $container->get(LoginSmsService::class));
+        self::assertInstanceOf(SmsNoticeService::class, $container->get(SmsNoticeService::class));
+        self::assertInstanceOf(AliyunGateway::class, $container->get(AliyunGateway::class));
+        self::assertInstanceOf(TencentGateway::class, $container->get(TencentGateway::class));
         self::assertInstanceOf(DatabaseSmsConfigRepository::class, $container->get(SmsConfigRepositoryInterface::class));
         self::assertInstanceOf(Dysmsapi::class, $container->get(Dysmsapi::class));
     }

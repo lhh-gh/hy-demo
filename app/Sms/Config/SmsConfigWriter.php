@@ -10,7 +10,7 @@ declare(strict_types=1);
  * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
 
-namespace App\Sms;
+namespace App\Sms\Config;
 
 use Hyperf\DbConnection\Db;
 use InvalidArgumentException;

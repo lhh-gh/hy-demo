@@ -16,7 +16,7 @@ use AlibabaCloud\SDK\Dysmsapi\V20170525\Dysmsapi;
 use AlibabaCloud\SDK\Dysmsapi\V20170525\Models\SendSmsRequest;
 use AlibabaCloud\SDK\Dysmsapi\V20170525\Models\SendSmsResponse;
 use AlibabaCloud\SDK\Dysmsapi\V20170525\Models\SendSmsResponseBody;
-use App\Sms\AliyunSmsSender;
+use App\Sms\Sender\AliyunSmsSender;
 use Hyperf\Config\Config;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -53,7 +53,7 @@ final class AliyunSmsSenderTest extends TestCase
         $client->expects(self::once())->method('sendSms')->willReturn($response);
 
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('短信平台拒绝受理');
+        $this->expectExceptionMessage($code === null ? '短信调用失败，受理结果待确认' : '短信平台拒绝受理');
 
         (new AliyunSmsSender($client, $this->config()))->sendCode('13800138000', '123456');
     }

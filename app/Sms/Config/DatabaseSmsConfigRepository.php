@@ -1,9 +1,18 @@
 <?php
 
 declare(strict_types=1);
+/**
+ * This file is part of Hyperf.
+ *
+ * @link     https://www.hyperf.io
+ * @document https://hyperf.wiki
+ * @contact  group@hyperf.io
+ * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
+ */
 
-namespace App\Sms;
+namespace App\Sms\Config;
 
+use App\Sms\Contract\SmsConfigRepositoryInterface;
 use Hyperf\DbConnection\Db;
 use RuntimeException;
 
@@ -40,8 +49,12 @@ class DatabaseSmsConfigRepository implements SmsConfigRepositoryInterface
         $snapshot = new SmsConfigSnapshot(
             channelId: (int) $row->channel_id,
             provider: $row->provider,
-            revision: sprintf('route:%s/channel:%s/template:%s',
-                $row->route_version, $row->channel_version, $row->template_version),
+            revision: sprintf(
+                'route:%s/channel:%s/template:%s',
+                $row->route_version,
+                $row->channel_version,
+                $row->template_version
+            ),
             credentials: $this->cipher->decrypt($row->credentials_ciphertext),
             options: $options,
             templateId: $row->template_id,

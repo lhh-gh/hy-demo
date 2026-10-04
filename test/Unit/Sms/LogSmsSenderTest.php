@@ -12,7 +12,8 @@ declare(strict_types=1);
 
 namespace HyperfTest\Unit\Sms;
 
-use App\Sms\LogSmsSender;
+use App\Sms\Message\SmsSendStatus;
+use App\Sms\Sender\LogSmsSender;
 use Hyperf\Logger\LoggerFactory;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
@@ -33,6 +34,8 @@ final class LogSmsSenderTest extends TestCase
         $factory = $this->createMock(LoggerFactory::class);
         $factory->expects(self::once())->method('get')->with('sms')->willReturn($logger);
 
-        (new LogSmsSender($factory))->sendCode('13800138000', '012345');
+        $result = (new LogSmsSender($factory))->sendCode('13800138000', '012345');
+        self::assertSame(SmsSendStatus::Simulated, $result->status);
+        self::assertSame('log', $result->provider);
     }
 }

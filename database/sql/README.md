@@ -7,7 +7,7 @@
 ## 准备与调用
 
 1. 设置 `.env.example` 所说明的 `SMS_CREDENTIALS_KEY`，所有 Worker/实例保持一致。用 `openssl rand -base64 32` 生成并安全保存，已有密文不能直接更换密钥。
-2. 在已引导 Hyperf 的内部命令或已鉴权服务中，注入 `App\Sms\SmsConfigWriter` 和 `App\Sms\SmsRoutePublisher`。当前没有配置管理 HTTP 接口或管理页面。
+2. 在已引导 Hyperf 的内部命令或已鉴权服务中，注入 `App\Sms\Config\SmsConfigWriter` 和 `App\Sms\Config\SmsRoutePublisher`。当前没有配置管理 HTTP 接口或管理页面。
 3. 调用 `createChannel($name, $provider, $credentials, $options, $templateId, $signName, $mapping)`，返回渠道 ID，并原子创建该渠道的 `login_code` 模板；渠道和模板版本均为 1。支持 `aliyun` 和 `tencent`，七牛云尚未实现。
 4. 调用 `switchChannel('login_code', $channelId, 0)` 首次发布，路由版本为 1。切换已有路由时传该路由的实际版本；重复创建和过期版本均应拒绝。
 5. 调用 `updateChannel($channelId, $channelVersion, $credentials, $options)` 更新渠道。凭据或 options 传 `null` 保留原值；凭据数组是完整替换，不是字段合并，空表单应先转换为 `null`。

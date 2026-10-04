@@ -27,6 +27,23 @@ vendor/bin/phpunit --bootstrap vendor/autoload.php test/Unit/Sms
 
 生产动态发送前，需准备 `sms_routes`、`sms_channels`、`sms_templates` 表和有效配置，并设置 `.env.example` 中说明的 `SMS_CREDENTIALS_KEY`。用 `openssl rand -base64 32` 生成密钥，安全保存并让所有 Worker/实例使用同一值；已有密文不能直接更换密钥。环境和依赖绑定修改后需重启或重载常驻服务。数据库配置读取和两家平台的真实发送仍需单独联调。
 
+## 发送契约与本轮架构调整
+
+sendCode()、sendLoginCode() 和 SmsNoticeService::notify() 现在返回只读 SmsSendResult。现有忽略返回值的调用方式仍可使用；自定义发送器、Gateway 实现及测试替身必须同步修改返回类型，并显式提供回执。SmsNoticeService 改为构造注入 LoginSmsService，手动实例化时需传入该服务。
+
+- Accepted：厂商确认受理，不代表最终送达。
+- Simulated：开发或测试环境只记录脱敏日志，没有发送。
+- Rejected：明确拒绝，通过 SmsSendException::$result 读取状态、平台、请求 ID 和错误码。
+- Unknown：超时、SDK 异常或缺少有效状态，仍抛出 SmsSendException；不能据此自动重发或切换平台。
+
+失败异常仍继承 RuntimeException，不携带 SDK 原始异常链、原始响应或厂商错误消息。配置与参数错误在发送前拒绝，不作为厂商受理结果。请求 ID 可能缺失，调用方应接受 null。
+
+业务入口统一复用 LoginCodeInput 的大陆手机号与六位验证码约束；原通知入口经过登录服务，各发送实现也会校验，防止直接调用绕过。当前路由仍固定为 login_code。
+
+动态 Gateway 通过 AliyunClientFactory / TencentClientFactory 根据每次快照创建 SDK 客户端，Hyperf 自动构造注入；测试可替换工厂。静态示例 AliyunSmsSender 同步遵循回执及异常契约，生产绑定仍为动态路由。
+
+新增 DynamicGatewayTest 覆盖两家动态适配器的参数映射、受理回执、拒绝错误码、空响应、SDK 异常脱敏，以及发送前校验；SmsNoticeServiceTest 验证通知入口无法绕过校验。绑定测试覆盖新工厂依赖的自动装配。所有 SDK 调用均模拟，不发送真实短信。
+
 ## 新增业务如何测试
 
 新增业务继续依赖 `SmsSenderInterface`，为业务单独编写测试，注入接口的 Mock。已有的发送器测试和环境绑定测试可以复用，不需要每个业务重复测试日志输出和阿里云 SDK。
@@ -42,7 +59,7 @@ declare(strict_types=1);
 
 namespace App\Service;
 
-use App\Contract\SmsSenderInterface;
+use App\Sms\Contract\SmsSenderInterface;
 
 class RegisterService
 {
@@ -67,7 +84,7 @@ declare(strict_types=1);
 
 namespace HyperfTest\Unit\Sms;
 
-use App\Contract\SmsSenderInterface;
+use App\Sms\Contract\SmsSenderInterface;
 use App\Service\RegisterService;
 use PHPUnit\Framework\TestCase;
 
@@ -78,7 +95,8 @@ final class RegisterServiceTest extends TestCase
         $sender = $this->createMock(SmsSenderInterface::class);
         $sender->expects(self::once())
             ->method('sendCode')
-            ->with('13800138000', '123456');
+            ->with('13800138000', '123456')
+            ->willReturn(new \App\Sms\Message\SmsSendResult(\App\Sms\Message\SmsSendStatus::Accepted, 'aliyun'));
 
         $service = new RegisterService($sender);
         $service->sendRegisterCode('13800138000', '123456');
@@ -99,7 +117,7 @@ vendor/bin/phpunit --bootstrap vendor/autoload.php test/Unit/Sms/RegisterService
 | 正常注册 | 调用短信接口一次，手机号和验证码正确 |
 | 手机号已注册 | 拒绝操作，不调用短信接口 |
 | 发送过于频繁 | 拒绝操作，不调用短信接口 |
-| 短信发送失败 | 按业务约定传播异常、返回错误或执行有限次数的重试 |
+| 短信发送失败 | 按业务约定传播类型化异常；结果未知时不得自动重发 |
 
 对于拒绝发送的场景，在调用业务方法前设置以下断言，并断言业务约定的异常或返回值：
 

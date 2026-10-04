@@ -10,12 +10,12 @@ declare(strict_types=1);
  * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
 use AlibabaCloud\SDK\Dysmsapi\V20170525\Dysmsapi;
-use App\Contract\SmsSenderInterface;
-use App\Factory\AliyunSmsClientFactory;
-use App\Sms\DatabaseSmsConfigRepository;
-use App\Sms\LogSmsSender;
-use App\Sms\RoutingSmsSender;
-use App\Sms\SmsConfigRepositoryInterface;
+use App\Sms\Config\DatabaseSmsConfigRepository;
+use App\Sms\Contract\SmsConfigRepositoryInterface;
+use App\Sms\Contract\SmsSenderInterface;
+use App\Sms\Gateway\Aliyun\AliyunSmsClientFactory;
+use App\Sms\Sender\LogSmsSender;
+use App\Sms\Sender\RoutingSmsSender;
 
 use function Hyperf\Support\env;
 

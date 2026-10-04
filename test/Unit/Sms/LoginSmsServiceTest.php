@@ -12,8 +12,10 @@ declare(strict_types=1);
 
 namespace HyperfTest\Unit\Sms;
 
-use App\Contract\SmsSenderInterface;
 use App\Service\LoginSmsService;
+use App\Sms\Contract\SmsSenderInterface;
+use App\Sms\Message\SmsSendResult;
+use App\Sms\Message\SmsSendStatus;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -28,9 +30,10 @@ final class LoginSmsServiceTest extends TestCase
     public function testValidCodeIsDelegatedToInterface(): void
     {
         $sender = $this->createMock(SmsSenderInterface::class);
-        $sender->expects(self::once())->method('sendCode')->with('13800138000', '012345');
+        $receipt = new SmsSendResult(SmsSendStatus::Accepted, 'aliyun', 'request-id');
+        $sender->expects(self::once())->method('sendCode')->with('13800138000', '012345')->willReturn($receipt);
 
-        (new LoginSmsService($sender))->sendLoginCode('13800138000', '012345');
+        self::assertSame($receipt, (new LoginSmsService($sender))->sendLoginCode('13800138000', '012345'));
     }
 
     #[DataProvider('invalidInputs')]

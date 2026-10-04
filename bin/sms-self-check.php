@@ -11,15 +11,17 @@ declare(strict_types=1);
  */
 require dirname(__DIR__) . '/vendor/autoload.php';
 
-use App\Contract\SmsSenderInterface;
 use App\Service\LoginSmsService;
-use App\Sms\RoutingSmsSender;
-use App\Sms\SmsConfigRepositoryInterface;
-use App\Sms\SmsConfigSnapshot;
-use App\Sms\SmsConfigValidator;
-use App\Sms\SmsCredentialCipher;
-use App\Sms\SmsGatewayFactory;
-use App\Sms\SmsGatewayInterface;
+use App\Sms\Config\SmsConfigSnapshot;
+use App\Sms\Config\SmsConfigValidator;
+use App\Sms\Config\SmsCredentialCipher;
+use App\Sms\Contract\SmsConfigRepositoryInterface;
+use App\Sms\Contract\SmsGatewayInterface;
+use App\Sms\Contract\SmsSenderInterface;
+use App\Sms\Gateway\SmsGatewayFactory;
+use App\Sms\Message\SmsSendResult;
+use App\Sms\Message\SmsSendStatus;
+use App\Sms\Sender\RoutingSmsSender;
 use Hyperf\Config\Config;
 
 function check(bool $condition, string $message): void
@@ -51,9 +53,10 @@ $repository = new class implements SmsConfigRepositoryInterface {
 $gateway = new class implements SmsGatewayInterface {
     public array $calls = [];
 
-    public function sendCode(SmsConfigSnapshot $config, string $mobile, string $code): void
+    public function sendCode(SmsConfigSnapshot $config, string $mobile, string $code): SmsSendResult
     {
         $this->calls[] = [$config, $mobile, $code];
+        return new SmsSendResult(SmsSendStatus::Accepted, $config->provider);
     }
 };
 $factory = new class($gateway) extends SmsGatewayFactory {
@@ -70,7 +73,8 @@ $factory = new class($gateway) extends SmsGatewayFactory {
     }
 };
 $sender = new RoutingSmsSender($repository, $factory);
-$sender->sendCode('13800138000', '123456');
+$receipt = $sender->sendCode('13800138000', '123456');
+check($receipt->status === SmsSendStatus::Accepted && $receipt->provider === 'aliyun', '路由未透传回执');
 $sender->sendCode('13900139000', '654321');
 check($repository->reads === 2, '没有逐次读取配置');
 check($factory->providers === ['aliyun', 'tencent'], '平台未按新快照选择');
@@ -139,7 +143,7 @@ rejects(fn () => $wrongCipher->decrypt($encrypted), '未拒绝错误解密密钥
 $businessSender = new class implements SmsSenderInterface {
     public int $calls = 0;
 
-    public function sendCode(string $mobile, string $code): void
+    public function sendCode(string $mobile, string $code): SmsSendResult
     {
         ++$this->calls;
         throw new RuntimeException('模拟平台拒绝');

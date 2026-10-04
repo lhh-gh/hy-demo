@@ -10,8 +10,11 @@ declare(strict_types=1);
  * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
 
-namespace App\Sms;
+namespace App\Sms\Gateway;
 
+use App\Sms\Contract\SmsGatewayInterface;
+use App\Sms\Gateway\Aliyun\AliyunGateway;
+use App\Sms\Gateway\Tencent\TencentGateway;
 use Psr\Container\ContainerInterface;
 use RuntimeException;
 

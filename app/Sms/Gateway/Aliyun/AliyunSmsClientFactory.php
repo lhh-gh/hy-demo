@@ -1,13 +1,22 @@
 <?php
 
 declare(strict_types=1);
+/**
+ * This file is part of Hyperf.
+ *
+ * @link     https://www.hyperf.io
+ * @document https://hyperf.wiki
+ * @contact  group@hyperf.io
+ * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
+ */
 
-namespace App\Factory;
+namespace App\Sms\Gateway\Aliyun;
 
 use AlibabaCloud\SDK\Dysmsapi\V20170525\Dysmsapi;
 use Darabonba\OpenApi\Models\Config;
 use Hyperf\Contract\ConfigInterface;
 use Psr\Container\ContainerInterface;
+use RuntimeException;
 
 class AliyunSmsClientFactory
 {
@@ -21,7 +30,7 @@ class AliyunSmsClientFactory
         foreach (['access_key_id', 'access_key_secret', 'endpoint'] as $key) {
             if (! is_array($options) || ! is_string($options[$key] ?? null)
                 || trim($options[$key]) === '') {
-                throw new \RuntimeException('阿里云短信配置缺失：' . $key);
+                throw new RuntimeException('阿里云短信配置缺失：' . $key);
             }
         }
         $config = new Config([

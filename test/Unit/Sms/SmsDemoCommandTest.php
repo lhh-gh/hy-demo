@@ -14,6 +14,8 @@ namespace HyperfTest\Unit\Sms;
 
 use App\Command\SmsDemoCommand;
 use App\Service\LoginSmsService;
+use App\Sms\Message\SmsSendResult;
+use App\Sms\Message\SmsSendStatus;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
@@ -29,7 +31,7 @@ final class SmsDemoCommandTest extends TestCase
     {
         $service = $this->createMock(LoginSmsService::class);
         $service->expects($allowed ? self::once() : self::never())->method('sendLoginCode')
-            ->with('13800138000', '123456');
+            ->with('13800138000', '123456')->willReturn(new SmsSendResult(SmsSendStatus::Simulated, 'log'));
         $command = $this->getMockBuilder(SmsDemoCommand::class)->setConstructorArgs([$service])
             ->onlyMethods(['line'])->getMock();
         $command->expects($allowed ? self::once() : self::never())->method('line')

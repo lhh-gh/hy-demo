@@ -1,12 +1,24 @@
 <?php
 
 declare(strict_types=1);
+/**
+ * This file is part of Hyperf.
+ *
+ * @link     https://www.hyperf.io
+ * @document https://hyperf.wiki
+ * @contact  group@hyperf.io
+ * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
+ */
 
-namespace App\Sms;
+namespace App\Sms\Sender;
 
 use AlibabaCloud\SDK\Dysmsapi\V20170525\Dysmsapi;
 use AlibabaCloud\SDK\Dysmsapi\V20170525\Models\SendSmsRequest;
-use App\Contract\SmsSenderInterface;
+use App\Sms\Contract\SmsSenderInterface;
+use App\Sms\Exception\SmsSendException;
+use App\Sms\Message\LoginCodeInput;
+use App\Sms\Message\SmsSendResult;
+use App\Sms\Message\SmsSendStatus;
 use Hyperf\Contract\ConfigInterface;
 use RuntimeException;
 use Throwable;
@@ -19,8 +31,9 @@ class AliyunSmsSender implements SmsSenderInterface
     ) {
     }
 
-    public function sendCode(string $mobile, string $code): void
+    public function sendCode(string $mobile, string $code): SmsSendResult
     {
+        new LoginCodeInput($mobile, $code);
         $sign = (string) $this->config->get('sms.aliyun.sign_name', '');
         $template = (string) $this->config->get('sms.aliyun.template_code', '');
         if ($sign === '' || $template === '') {
@@ -36,10 +49,16 @@ class AliyunSmsSender implements SmsSenderInterface
             $response = $this->client->sendSms($request);
         } catch (Throwable) {
             // 不向默认异常日志传播可能含请求内容的 SDK 原始异常。
-            throw new RuntimeException('短信调用失败，受理结果待确认');
+            throw new SmsSendException(new SmsSendResult(SmsSendStatus::Unknown, 'aliyun'));
         }
-        if ($response->body?->code !== 'OK') {
-            throw new RuntimeException('短信平台拒绝受理');
+        $status = $response->body?->code;
+        $requestId = $response->body?->requestId;
+        if ($status === null || $status === '') {
+            throw new SmsSendException(new SmsSendResult(SmsSendStatus::Unknown, 'aliyun', $requestId));
         }
+        if ($status !== 'OK') {
+            throw new SmsSendException(new SmsSendResult(SmsSendStatus::Rejected, 'aliyun', $requestId, $status));
+        }
+        return new SmsSendResult(SmsSendStatus::Accepted, 'aliyun', $requestId);
     }
 }

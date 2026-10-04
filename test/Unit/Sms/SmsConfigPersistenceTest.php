@@ -12,10 +12,10 @@ declare(strict_types=1);
 
 namespace HyperfTest\Unit\Sms;
 
-use App\Sms\DatabaseSmsConfigRepository;
-use App\Sms\SmsConfigWriter;
-use App\Sms\SmsCredentialCipher;
-use App\Sms\SmsRoutePublisher;
+use App\Sms\Config\DatabaseSmsConfigRepository;
+use App\Sms\Config\SmsConfigWriter;
+use App\Sms\Config\SmsCredentialCipher;
+use App\Sms\Config\SmsRoutePublisher;
 use Hyperf\Config\Config;
 use Hyperf\Context\ApplicationContext;
 use Hyperf\Database\Connection;
