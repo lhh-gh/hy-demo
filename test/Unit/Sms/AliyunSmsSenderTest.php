@@ -45,7 +45,7 @@ final class AliyunSmsSenderTest extends TestCase
     }
 
     #[DataProvider('failedResponses')]
-    public function testFailedResponseThrows(?string $code, string $message): void
+    public function testFailedResponseThrows(?string $code): void
     {
         $client = $this->createMock(Dysmsapi::class);
         $response = new SendSmsResponse();
@@ -53,7 +53,7 @@ final class AliyunSmsSenderTest extends TestCase
         $client->expects(self::once())->method('sendSms')->willReturn($response);
 
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('短信发送请求失败：' . $message);
+        $this->expectExceptionMessage('短信平台拒绝受理');
 
         (new AliyunSmsSender($client, $this->config()))->sendCode('13800138000', '123456');
     }
@@ -61,8 +61,8 @@ final class AliyunSmsSenderTest extends TestCase
     public static function failedResponses(): array
     {
         return [
-            '业务失败' => ['isv.BUSINESS_LIMIT_CONTROL', 'isv.BUSINESS_LIMIT_CONTROL'],
-            '空响应体' => [null, 'EMPTY_RESPONSE'],
+            '业务失败' => ['isv.BUSINESS_LIMIT_CONTROL'],
+            '空响应体' => [null],
         ];
     }
 
@@ -75,7 +75,7 @@ final class AliyunSmsSenderTest extends TestCase
         $client->expects(self::never())->method('sendSms');
 
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('阿里云短信签名或模板未配置');
+        $this->expectExceptionMessage('短信签名或模板未配置');
 
         (new AliyunSmsSender($client, $config))->sendCode('13800138000', '123456');
     }
@@ -85,14 +85,18 @@ final class AliyunSmsSenderTest extends TestCase
         return [['sign_name'], ['template_code']];
     }
 
-    public function testSdkExceptionIsPropagated(): void
+    public function testSdkExceptionIsSanitized(): void
     {
-        $failure = new RuntimeException('连接超时');
+        $failure = new RuntimeException('连接超时 mobile=13800138000 code=123456 secret=test-secret');
         $client = $this->createMock(Dysmsapi::class);
         $client->expects(self::once())->method('sendSms')->willThrowException($failure);
-        $this->expectExceptionObject($failure);
-
-        (new AliyunSmsSender($client, $this->config()))->sendCode('13800138000', '123456');
+        try {
+            (new AliyunSmsSender($client, $this->config()))->sendCode('13800138000', '123456');
+            self::fail('SDK 异常应转换为脱敏异常');
+        } catch (RuntimeException $exception) {
+            self::assertSame('短信调用失败，受理结果待确认', $exception->getMessage());
+            self::assertNull($exception->getPrevious());
+        }
     }
 
     private function config(): Config

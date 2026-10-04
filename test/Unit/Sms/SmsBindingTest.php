@@ -16,8 +16,10 @@ use AlibabaCloud\SDK\Dysmsapi\V20170525\Dysmsapi;
 use App\Contract\SmsSenderInterface;
 use App\Factory\AliyunSmsClientFactory;
 use App\Service\LoginSmsService;
-use App\Sms\AliyunSmsSender;
+use App\Sms\DatabaseSmsConfigRepository;
 use App\Sms\LogSmsSender;
+use App\Sms\RoutingSmsSender;
+use App\Sms\SmsConfigRepositoryInterface;
 use Hyperf\Config\Config;
 use Hyperf\Contract\ConfigInterface;
 use Hyperf\Di\Container;
@@ -39,12 +41,14 @@ final class SmsBindingTest extends TestCase
     {
         $definitions = $this->definitions($environment);
         self::assertSame(AliyunSmsClientFactory::class, $definitions[Dysmsapi::class]);
+        self::assertSame(DatabaseSmsConfigRepository::class, $definitions[SmsConfigRepositoryInterface::class]);
 
-        // 每个用例新建容器，使用假凭据构造 SDK，不调用发送接口。
+        // 每个用例新建容器；只解析依赖，不查询数据库或发送短信。
         $container = new Container(new DefinitionSource($definitions));
         $container->set(ConfigInterface::class, new Config(['sms' => ['aliyun' => [
             'access_key_id' => 'test-key',
             'access_key_secret' => 'test-secret',
+            'endpoint' => 'dysmsapi.aliyuncs.com',
         ]]]));
         $loggerFactory = $this->createMock(LoggerFactory::class);
         $loggerFactory->method('get')->willReturn(new NullLogger());
@@ -52,6 +56,8 @@ final class SmsBindingTest extends TestCase
 
         self::assertInstanceOf($expected, $container->get(SmsSenderInterface::class));
         self::assertInstanceOf(LoginSmsService::class, $container->get(LoginSmsService::class));
+        self::assertInstanceOf(DatabaseSmsConfigRepository::class, $container->get(SmsConfigRepositoryInterface::class));
+        self::assertInstanceOf(Dysmsapi::class, $container->get(Dysmsapi::class));
     }
 
     public static function environments(): array
@@ -59,7 +65,7 @@ final class SmsBindingTest extends TestCase
         return [
             '开发' => ['dev', LogSmsSender::class],
             '测试' => ['testing', LogSmsSender::class],
-            '生产' => ['prod', AliyunSmsSender::class],
+            '生产' => ['prod', RoutingSmsSender::class],
             '未设置时默认开发' => [null, LogSmsSender::class],
         ];
     }

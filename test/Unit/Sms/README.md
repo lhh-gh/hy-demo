@@ -12,14 +12,16 @@ vendor/bin/phpunit --bootstrap vendor/autoload.php test/Unit/Sms
 | --- | --- |
 | `LoginSmsServiceTest.php` | 通过接口发送、参数校验、发送异常传播 |
 | `LogSmsSenderTest.php` | 手机号脱敏，日志仅记录验证码长度 |
-| `AliyunSmsSenderTest.php` | SDK 请求参数、成功和失败响应、缺少配置、SDK 异常 |
-| `SmsBindingTest.php` | 实际依赖配置、SDK 工厂绑定、不同环境下容器解析及业务构造 |
+| `AliyunSmsSenderTest.php` | SDK 请求参数、成功和失败响应、缺少配置、SDK 异常脱敏且不保留原始异常链 |
+| `SmsBindingTest.php` | 实际依赖配置、SDK 工厂绑定、配置仓库解析、不同环境下容器解析及业务构造 |
 
 环境绑定测试在读取依赖配置前设置 `APP_ENV`，每个用例创建新容器，并在读取后恢复原环境值。因此不受 PHPUnit 默认设置 `APP_ENV=testing` 的影响，也不会复用旧容器的实例。
 
-开发环境使用 `dev`，生产环境使用 `prod`，测试环境使用 `testing`。没有设置时默认使用开发实现，未知环境应抛出异常。
+开发环境使用 `dev`，生产环境使用 `prod`，测试环境使用 `testing`。开发和测试绑定 `LogSmsSender`，生产绑定 `RoutingSmsSender`；配置仓库接口独立绑定到 `DatabaseSmsConfigRepository`。没有设置时默认使用开发实现，未知环境应抛出异常。
 
-阿里云实现测试使用 SDK Mock；生产环境绑定测试使用假凭据构造真实 SDK，但不调用发送方法。以上测试不发送真实短信，也不验证真实凭据、签名和模板的可用性。
+阿里云实现测试使用 SDK Mock；环境绑定测试解析真实的路由服务及配置仓库，并使用含 endpoint 的假配置构造静态阿里云 SDK，但不调用发送或数据库查询方法。以上测试不发送真实短信，也不验证真实凭据、签名、模板及数据库配置的可用性。
+
+生产动态发送前，需准备 `sms_routes`、`sms_channels`、`sms_templates` 表和有效配置，并设置 `.env.example` 中说明的 `SMS_CREDENTIALS_KEY`。用 `openssl rand -base64 32` 生成密钥，安全保存并让所有 Worker/实例使用同一值；已有密文不能直接更换密钥。环境和依赖绑定修改后需重启或重载常驻服务。数据库配置读取和两家平台的真实发送仍需单独联调。
 
 ## 新增业务如何测试
 
@@ -114,4 +116,4 @@ $sender->expects(self::never())->method('sendCode');
 | 调整环境选择或依赖注册 | 环境绑定测试 |
 | 新增订单通知、物流提醒等短信类型 | 新接口行为、模板参数映射及使用它的新业务测试 |
 
-当前接口 `sendCode($mobile, $code)` 表达的是验证码发送，当前阿里云实现使用一组签名和模板配置。如果注册、登录需要不同模板，或者后续需要发送订单通知、物流提醒，应先明确短信场景、模板和参数的接口设计，再补充实现和测试。不要将订单内容直接塞进 `$code` 参数，也不要在业务中通过判断环境来选择发送器。
+当前接口 `sendCode($mobile, $code)` 表达的是验证码发送，生产路由固定读取 `login_code` 场景的渠道、签名和模板，静态阿里云发送器仍使用配置文件中的一组签名和模板。如果注册、登录需要不同模板，或者后续需要发送订单通知、物流提醒，应先明确短信场景、模板和参数的接口设计，再补充实现和测试。不要将订单内容直接塞进 `$code` 参数，也不要在业务中通过判断环境来选择发送器。

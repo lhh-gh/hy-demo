@@ -8,7 +8,6 @@ use AlibabaCloud\SDK\Dysmsapi\V20170525\Dysmsapi;
 use Darabonba\OpenApi\Models\Config;
 use Hyperf\Contract\ConfigInterface;
 use Psr\Container\ContainerInterface;
-use RuntimeException;
 
 class AliyunSmsClientFactory
 {
@@ -16,30 +15,23 @@ class AliyunSmsClientFactory
         ContainerInterface $container,
         array $parameters = []
     ): Dysmsapi {
-        $config = $container->get(ConfigInterface::class);
+        $options = $container->get(ConfigInterface::class)
+            ->get('sms.aliyun');
 
-        $accessKeyId = (string) $config->get(
-            'sms.aliyun.access_key_id',
-            ''
-        );
-
-        $accessKeySecret = (string) $config->get(
-            'sms.aliyun.access_key_secret',
-            ''
-        );
-
-        if ($accessKeyId === '' || $accessKeySecret === '') {
-            throw new RuntimeException('阿里云短信凭据未配置');
+        foreach (['access_key_id', 'access_key_secret', 'endpoint'] as $key) {
+            if (! is_array($options) || ! is_string($options[$key] ?? null)
+                || trim($options[$key]) === '') {
+                throw new \RuntimeException('阿里云短信配置缺失：' . $key);
+            }
         }
-
-        $sdkConfig = new Config([
-            'accessKeyId' => $accessKeyId,
-            'accessKeySecret' => $accessKeySecret,
-            'endpoint' => 'dysmsapi.aliyuncs.com',
+        $config = new Config([
+            'accessKeyId' => $options['access_key_id'],
+            'accessKeySecret' => $options['access_key_secret'],
+            'endpoint' => $options['endpoint'],
             'connectTimeout' => 3000,
             'readTimeout' => 5000,
         ]);
 
-        return new Dysmsapi($sdkConfig);
+        return new Dysmsapi($config);
     }
 }
