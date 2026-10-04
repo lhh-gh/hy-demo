@@ -6,7 +6,7 @@
 vendor/bin/phpunit --bootstrap vendor/autoload.php test/Unit/Sms
 ```
 
-这里覆盖默认 bootstrap，仅加载 Composer 自动加载，避免启动完整应用及连接外部服务。不需要启动 HTTP、Redis 或数据库，不读取本地 `.env`。
+这里覆盖默认 bootstrap，仅加载 Composer 自动加载，避免启动完整应用及连接外部服务。不需要启动 HTTP、Redis 或数据库服务，不读取本地 `.env`。持久化测试需要 `pdo_sqlite`，仅创建隔离的内存数据库。
 
 | 文件 | 验证内容 |
 | --- | --- |
@@ -14,6 +14,10 @@ vendor/bin/phpunit --bootstrap vendor/autoload.php test/Unit/Sms
 | `LogSmsSenderTest.php` | 手机号脱敏，日志仅记录验证码长度 |
 | `AliyunSmsSenderTest.php` | SDK 请求参数、成功和失败响应、缺少配置、SDK 异常脱敏且不保留原始异常链 |
 | `SmsBindingTest.php` | 实际依赖配置、SDK 工厂绑定、配置仓库解析、不同环境下容器解析及业务构造 |
+| `SmsConfigPersistenceTest.php` | 渠道和模板写入、发布切换、配置即时读取、版本冲突、禁用配置及事务回滚 |
+| `SmsDemoCommandTest.php` | dev/testing 模拟调用，prod/未知环境在发送前拒绝 |
+
+也可执行 `php bin/sms-self-check.php` 验证路由快照、加密与校验，执行 `php bin/sms-binding-check.php` 检查当前动态绑定及管理服务装配。数据库初始化与服务调用说明见 [短信配置表与服务使用](../../../database/sql/README.md)。SQLite 用例不能替代 MySQL 行锁、并发首次发布或多 Worker 联调。
 
 环境绑定测试在读取依赖配置前设置 `APP_ENV`，每个用例创建新容器，并在读取后恢复原环境值。因此不受 PHPUnit 默认设置 `APP_ENV=testing` 的影响，也不会复用旧容器的实例。
 

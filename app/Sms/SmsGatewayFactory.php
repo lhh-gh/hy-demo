@@ -1,6 +1,14 @@
 <?php
 
 declare(strict_types=1);
+/**
+ * This file is part of Hyperf.
+ *
+ * @link     https://www.hyperf.io
+ * @document https://hyperf.wiki
+ * @contact  group@hyperf.io
+ * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
+ */
 
 namespace App\Sms;
 
@@ -8,7 +16,7 @@ use Psr\Container\ContainerInterface;
 use RuntimeException;
 
 /**
- * 平台工厂类
+ * 平台工厂类.
  */
 class SmsGatewayFactory
 {
@@ -21,7 +29,7 @@ class SmsGatewayFactory
         $class = match ($provider) {
             'aliyun' => AliyunGateway::class,
             'tencent' => TencentGateway::class,
-            default => throw new RuntimeException('不支持的短信平台：' . $provider),
+            default => throw new RuntimeException('短信平台尚未实现：' . $provider),
         };
 
         return $this->container->get($class);
