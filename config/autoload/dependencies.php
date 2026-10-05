@@ -10,6 +10,8 @@ declare(strict_types=1);
  * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
 use AlibabaCloud\SDK\Dysmsapi\V20170525\Dysmsapi;
+use App\Repository\Registration\DatabaseUserRepository;
+use App\Repository\Registration\UserRepositoryInterface;
 use App\Sms\Config\DatabaseSmsConfigRepository;
 use App\Sms\Contract\SmsConfigRepositoryInterface;
 use App\Sms\Contract\SmsSenderInterface;
@@ -20,6 +22,7 @@ use App\Sms\Sender\RoutingSmsSender;
 use function Hyperf\Support\env;
 
 return [
+    UserRepositoryInterface::class => DatabaseUserRepository::class,
     Dysmsapi::class => AliyunSmsClientFactory::class,
     SmsConfigRepositoryInterface::class => DatabaseSmsConfigRepository::class,
     SmsSenderInterface::class => match (env('APP_ENV', 'dev')) {
